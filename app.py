@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Patch
 
+# Page config
 st.set_page_config(page_title="Category-wise BH < 10%", layout="wide")
 st.title("📊 Category-wise BH < 10% Comparison")
 
@@ -11,7 +12,7 @@ uploaded_file = st.file_uploader("📁 Upload CSV with 'Category', 'Last week', 
 
 if uploaded_file:
     try:
-        # Load and clean data
+        # Load and process
         df = pd.read_csv(uploaded_file)
         df["Last week"] = df["Last week"].astype(str).str.replace("%", "").astype(float)
         df["This week"] = df["This week"].astype(str).str.replace("%", "").astype(float)
@@ -20,17 +21,11 @@ if uploaded_file:
         last_vals = df["Last week"].tolist()
         this_vals = df["This week"].tolist()
 
-        # Each category gets two bars → double x positions
-        total_bars = len(categories) * 2
-        x = np.arange(total_bars)
-        width = 0.8
+        x = np.arange(len(categories))
+        width = 0.35
 
-        # Flattened data and labels
-        values = []
-        colors = []
-        x_labels = []
-
-        def get_color(val):
+        # Color zones
+        def get_zone_color(val):
             if val >= 50:
                 return "red"
             elif val >= 10:
@@ -38,38 +33,42 @@ if uploaded_file:
             else:
                 return "green"
 
-        for i in range(len(categories)):
-            # Left bar = last week
-            values.append(last_vals[i])
-            colors.append(get_color(last_vals[i]))
-            x_labels.append(f"{categories[i]}\nLast Week")
+        colors_last = [get_zone_color(val) for val in last_vals]
+        colors_this = [get_zone_color(val) for val in this_vals]
 
-            # Right bar = this week
-            values.append(this_vals[i])
-            colors.append(get_color(this_vals[i]))
-            x_labels.append(f"{categories[i]}\nThis Week")
+        # Plot setup
+        fig, ax = plt.subplots(figsize=(max(12, len(categories) * 1), 7))
 
-        # Plot
-        fig, ax = plt.subplots(figsize=(max(10, len(x) * 0.6), 7))
-        bars = ax.bar(x, values, width=width * 0.9, color=colors)
+        bars1 = ax.bar(x - width/2, last_vals, width, color=colors_last, edgecolor='blue', linewidth=2)
+        bars2 = ax.bar(x + width/2, this_vals, width, color=colors_this, edgecolor='gold', linewidth=2)
 
-        # Add value labels above bars
-        for idx, bar in enumerate(bars):
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2, height + 1, f"{values[idx]:.2f}", ha='center', fontsize=9)
-
+        # Axes and title
         ax.set_ylabel("Percentage")
         ax.set_title("Category-wise BH < 10%")
         ax.set_xticks(x)
-        ax.set_xticklabels(x_labels, rotation=45, ha="right")
+        ax.set_xticklabels(categories, rotation=45, ha="right")
 
-        # Color zone legend
+        # Add value labels on top
+        for i in range(len(categories)):
+            ax.text(x[i] - width/2, last_vals[i] + 1, f"{last_vals[i]:.2f}", ha='center', fontsize=9)
+            ax.text(x[i] + width/2, this_vals[i] + 1, f"{this_vals[i]:.2f}", ha='center', fontsize=9)
+
+        # Legends
         zone_legend = [
-            Patch(color='green', label='🟩 Healthy Zone (<10%)'),
-            Patch(color='orange', label='🟧 Watch Zone (10–50%)'),
-            Patch(color='red', label='🟥 Risk Zone (50%+)')
+            Patch(color='green', label='Healthy Zone (<10%)'),
+            Patch(color='orange', label='Watch Zone (10–50%)'),
+            Patch(color='red', label='Risk Zone (50%+)')
         ]
-        ax.legend(handles=zone_legend, title="Batch Health Zones", loc="upper right")
+
+        week_legend = [
+            Patch(facecolor='white', edgecolor='blue', linewidth=2, label='⬅️ Last Week'),
+            Patch(facecolor='white', edgecolor='gold', linewidth=2, label='➡️ This Week')
+        ]
+
+        # Combine both legends
+        legend1 = ax.legend(handles=zone_legend, title="Zone Color", loc="upper left")
+        ax.add_artist(legend1)
+        ax.legend(handles=week_legend, title="Week", loc="upper right")
 
         st.pyplot(fig)
 
