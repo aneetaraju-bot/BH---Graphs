@@ -15,10 +15,10 @@ this_week_date = "June 30"
 uploaded_file = st.file_uploader("📁 Upload CSV with 'Category', 'Last week', 'This week' columns", type=["csv"])
 
 if uploaded_file:
-    try:
-        df = pd.read_csv(uploaded_file)
+    df = pd.read_csv(uploaded_file)
 
-        # Clean percentage symbols
+    try:
+        # Clean percentage symbols and convert to float
         df["Last week"] = df["Last week"].astype(str).str.replace("%", "").astype(float)
         df["This week"] = df["This week"].astype(str).str.replace("%", "").astype(float)
 
@@ -38,7 +38,7 @@ if uploaded_file:
 
         trend_colors = [get_trend_color(this, last) for this, last in zip(this_week_vals, last_week_vals)]
 
-        # Bar plot showing only THIS WEEK with trend color
+        # Plotting only THIS WEEK with trend color
         x = np.arange(len(categories))
         width = 0.6
 
@@ -61,7 +61,7 @@ if uploaded_file:
                         textcoords="offset points",
                         ha='center', va='bottom', fontsize=9)
 
-        # Legend
+        # Custom legend
         ax.legend(handles=[
             Patch(color='green', label='Improved (↓)'),
             Patch(color='red', label='Declined (↑)'),
@@ -71,7 +71,8 @@ if uploaded_file:
         st.pyplot(fig)
 
     except Exception as e:
-        st.error(f"❌ Error: {e}")
+        st.error(f"❌ Error processing file: {e}")
+
 else:
     st.info("📤 Please upload a CSV file with columns: Category, Last week, This week.")
 
