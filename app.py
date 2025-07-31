@@ -1,82 +1,64 @@
-import matplotlib.pyplot as plt
+import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-# ----------------------------
-# 1. Input Data
-# ----------------------------
+st.set_page_config(page_title="Batch Health Zones", layout="wide")
+st.title("📊 Batch Health Visualizer (Zone-Based)")
 
-# BH < 10% (Low Batch Health - Risk Indicator)
-data_below_10 = {
-    'Vertical': ['Commerce', 'Technical', 'Digital Marketing', 'Coding', 'Hospital Administration', 'Teaching'],
-    'Last week': [6.49, 0.0, 14.71, 56.78, 6.67, 21.74],
-    'This week': [6.25, 0.0, 18.52, 55.88, 0.0, 10.98]
-}
+# --- Upload ---
+st.sidebar.header("🔼 Upload CSVs")
+file_below = st.sidebar.file_uploader("📉 BH < 10% CSV", type="csv")
+file_above = st.sidebar.file_uploader("📈 BH > 50% CSV", type="csv")
 
-# BH > 50% (Healthy Indicator)
-data_above_50 = {
-    'Vertical': ['Commerce', 'Technical', 'Digital Marketing', 'Coding', 'Hospital Administration', 'Teaching'],
-    'Last week': [18.18, 20.59, 0.0, 0.0, 13.33, 11.96],
-    'This week': [17.5, 15.15, 0.0, 0.0, 15.38, 14.63]
-}
-
-df_below = pd.DataFrame(data_below_10)
-df_above = pd.DataFrame(data_above_50)
-
-# ----------------------------
-# 2. Zone Logic
-# ----------------------------
-
+# --- Zone color functions ---
 def get_zone_color_below(last, current):
     diff = current - last
     if diff > 1:
-        return 'red'     # Risk ↑
+        return 'red'
     elif diff < -1:
-        return 'green'   # Healthy ↓
+        return 'green'
     else:
-        return 'orange'  # Watch zone
+        return 'orange'
 
 def get_zone_color_above(last, current):
     diff = current - last
     if diff > 1:
-        return 'green'   # Healthy ↑
+        return 'green'
     elif diff < -1:
-        return 'red'     # Risk ↓
+        return 'red'
     else:
-        return 'orange'  # Watch zone
+        return 'orange'
 
-# ----------------------------
-# 3. Plot Function
-# ----------------------------
+# --- Graph function ---
+def plot_dual_bar(df, title, is_below=True):
+    df["Last week"] = df["Last week"].astype(str).str.replace("%", "").astype(float)
+    df["This week"] = df["This week"].astype(str).str.replace("%", "").astype(float)
 
-def plot_dual_bar(df, title, is_below=True, filename="output.png"):
     categories = df["Vertical"].tolist()
     last_vals = df["Last week"].tolist()
     this_vals = df["This week"].tolist()
-    
+
     x = np.arange(len(categories))
     width = 0.35
 
-    # Zone coloring
-    colors_this_week = [
-        get_zone_color_below(last_vals[i], this_vals[i]) if is_below else get_zone_color_above(last_vals[i], this_vals[i])
-        for i in range(len(categories))
-    ]
+    zone_colors = []
+    for i in range(len(categories)):
+        if is_below:
+            zone_colors.append(get_zone_color_below(last_vals[i], this_vals[i]))
+        else:
+            zone_colors.append(get_zone_color_above(last_vals[i], this_vals[i]))
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    
-    # Bars
     ax.bar(x - width/2, last_vals, width, label='Last Week', color='gray', edgecolor='black')
-    ax.bar(x + width/2, this_vals, width, label='This Week', color=colors_this_week, edgecolor='black')
+    ax.bar(x + width/2, this_vals, width, label='This Week', color=zone_colors, edgecolor='black')
 
-    # Labels and layout
     ax.set_xticks(x)
     ax.set_xticklabels(categories, rotation=45, ha='right')
-    ax.set_ylabel("Percentage of Batches")
+    ax.set_ylabel("Percentage of Courses")
     ax.set_title(title)
 
-    # Legend
     legend_elements = [
         Patch(facecolor='green', edgecolor='black', label='🟩 Healthy Zone'),
         Patch(facecolor='orange', edgecolor='black', label='🟧 Watch Zone'),
@@ -85,14 +67,17 @@ def plot_dual_bar(df, title, is_below=True, filename="output.png"):
         Patch(facecolor='white', edgecolor='black', label='⬜ This Week (Color Coded)')
     ]
     ax.legend(handles=legend_elements, loc='upper right')
+    st.pyplot(fig)
 
-    plt.tight_layout()
-    plt.savefig(filename)
-    plt.show()
+# --- Render charts ---
+if file_below:
+    st.subheader("📉 BH < 10% - Risk Zone Chart")
+    df_below = pd.read_csv(file_below)
+    df_below.rename(columns=lambda x: x.strip(), inplace=True)
+    plot_dual_bar(df_below, "BH < 10% Zone Analysis", is_below=True)
 
-# ----------------------------
-# 4. Run Plots & Save
-# ----------------------------
-
-plot_dual_bar(df_below, "Vertical-wise BH < 10%", is_below=True, filename="bh_below_10_colored.png")
-plot_dual_bar(df_above, "Vertical-wise BH > 50%", is_below=False, filename="bh_above_50_colored.png")
+if file_above:
+    st.subheader("📈 BH > 50% - Healthy Zone Chart")
+    df_above = pd.read_csv(file_above)
+    df_above.rename(columns=lambda x: x.strip(), inplace=True)
+    plot_dual_bar(df_above, "BH > 50% Zone Analysis", is_below=False)
