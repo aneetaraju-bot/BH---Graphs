@@ -5,84 +5,78 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
 st.set_page_config(page_title="Batch Health Zone Dashboard", layout="wide")
-st.title("📊 Batch Health Dashboard")
+st.title("📊 Batch Health Zone Dashboard - 4 Graph Analysis")
 
-st.sidebar.header("📂 Upload Data")
-file_below = st.sidebar.file_uploader("🔻 Upload CSV for BH < 10%", type="csv")
-file_above = st.sidebar.file_uploader("🔺 Upload CSV for BH > 50%", type="csv")
+# Sidebar: Upload CSV files
+st.sidebar.header("📂 Upload All 4 CSV Files")
+file_v_below = st.sidebar.file_uploader("1️⃣ Vertical-wise BH < 10%", type="csv")
+file_v_above = st.sidebar.file_uploader("2️⃣ Vertical-wise BH > 50%", type="csv")
+file_c_below = st.sidebar.file_uploader("3️⃣ Category-wise BH < 10%", type="csv")
+file_c_above = st.sidebar.file_uploader("4️⃣ Category-wise BH > 50%", type="csv")
 
-# -- ZONE COLOR FUNCTIONS --
+# Color logic
+def get_color_below(val, avg):
+    return 'red' if val > avg + 5 else 'orange' if avg - 5 <= val <= avg + 5 else 'green'
 
-def get_zone_color_below(val, avg):
-    if val > avg + 5:
-        return 'red'     # More risky
-    elif avg - 5 <= val <= avg + 5:
-        return 'orange'  # Watch zone
-    else:
-        return 'green'   # Healthy (less below 10%)
+def get_color_above(val, avg):
+    return 'green' if val > avg + 5 else 'orange' if avg - 5 <= val <= avg + 5 else 'red'
 
-def get_zone_color_above(val, avg):
-    if val >= avg + 5:
-        return 'green'   # Healthy
-    elif avg - 5 <= val <= avg + 5:
-        return 'orange'  # Watch
-    else:
-        return 'red'     # Risk (less above 50%)
-
-# -- PLOT FUNCTION --
-
-def plot_chart(df, title, is_below=True):
+# Chart plotting
+def draw_zone_chart(df, label_col, is_below, title):
     df["Last week"] = df["Last week"].astype(str).str.replace("%", "").astype(float)
     df["This week"] = df["This week"].astype(str).str.replace("%", "").astype(float)
 
-    categories = df["Vertical"].tolist()
-    last_vals = df["Last week"].tolist()
-    this_vals = df["This week"].tolist()
-    x = np.arange(len(categories))
+    labels = df[label_col].tolist()
+    last = df["Last week"].tolist()
+    this = df["This week"].tolist()
+
+    avg = np.mean(this)
+    x = np.arange(len(labels))
     width = 0.35
 
-    avg = np.mean(this_vals)
-
-    # Choose color logic
-    zone_colors = [
-        get_zone_color_below(v, avg) if is_below else get_zone_color_above(v, avg)
-        for v in this_vals
-    ]
+    zone_colors = [get_color_below(v, avg) if is_below else get_color_above(v, avg) for v in this]
 
     fig, ax = plt.subplots(figsize=(12, 6))
-
-    ax.bar(x - width/2, last_vals, width, color='white', edgecolor='black', label='Last Week')
-    ax.bar(x + width/2, this_vals, width, color=zone_colors, edgecolor='black', label='This Week')
+    ax.bar(x - width/2, last, width, color='white', edgecolor='black', label='Last Week')
+    ax.bar(x + width/2, this, width, color=zone_colors, edgecolor='black', label='This Week')
 
     ax.set_xticks(x)
-    ax.set_xticklabels(categories, rotation=45, ha='right')
-    ax.set_ylabel("Percentage of Batches")
-
-    label = "% Below BH 10%" if is_below else "% Above BH 50%"
+    ax.set_xticklabels(labels, rotation=45, ha='right')
+    ax.set_ylabel("Batch %")
     ax.set_title(f"{title} (Avg: {avg:.2f}%)")
 
-    # Legend
-    legend_elements = [
+    # Legend inside plot
+    legend_items = [
         Patch(facecolor='green', edgecolor='black', label='🟩 Healthy'),
         Patch(facecolor='orange', edgecolor='black', label='🟧 Watch Zone'),
         Patch(facecolor='red', edgecolor='black', label='🟥 Risk'),
         Patch(facecolor='white', edgecolor='black', label='⬜ Last Week'),
-        Patch(facecolor='black', edgecolor='black', label='⬛ This Week')
+        Patch(facecolor='black', edgecolor='black', label='⬛ This Week'),
     ]
-    ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1, 1))
-
+    ax.legend(handles=legend_items, loc='upper right', bbox_to_anchor=(1, 1))
     st.pyplot(fig)
 
-# -- BH < 10% --
-if file_below:
-    st.subheader("📉 Zone Chart for Batches Below BH 10%")
-    df_below = pd.read_csv(file_below)
-    df_below.rename(columns=lambda x: x.strip(), inplace=True)
-    plot_chart(df_below, "Zone Classification Based on % of Batches Below BH 10%", is_below=True)
+# Run visualizations
+if file_v_below:
+    st.subheader("1️⃣ Vertical-wise BH < 10% (Risk)")
+    df = pd.read_csv(file_v_below)
+    df.columns = df.columns.str.strip()
+    draw_zone_chart(df, label_col="Vertical", is_below=True, title="Vertical-wise BH < 10%")
 
-# -- BH > 50% --
-if file_above:
-    st.subheader("📈 Zone Chart for Batches Above BH 50%")
-    df_above = pd.read_csv(file_above)
-    df_above.rename(columns=lambda x: x.strip(), inplace=True)
-    plot_chart(df_above, "Zone Classification Based on % of Batches Above BH 50%", is_below=False)
+if file_v_above:
+    st.subheader("2️⃣ Vertical-wise BH > 50% (Healthy)")
+    df = pd.read_csv(file_v_above)
+    df.columns = df.columns.str.strip()
+    draw_zone_chart(df, label_col="Vertical", is_below=False, title="Vertical-wise BH > 50%")
+
+if file_c_below:
+    st.subheader("3️⃣ Category-wise BH < 10% (Risk)")
+    df = pd.read_csv(file_c_below)
+    df.columns = df.columns.str.strip()
+    draw_zone_chart(df, label_col="Category", is_below=True, title="Category-wise BH < 10%")
+
+if file_c_above:
+    st.subheader("4️⃣ Category-wise BH > 50% (Healthy)")
+    df = pd.read_csv(file_c_above)
+    df.columns = df.columns.str.strip()
+    draw_zone_chart(df, label_col="Category", is_below=False, title="Category-wise BH > 50%")
