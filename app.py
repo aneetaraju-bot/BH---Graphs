@@ -4,108 +4,113 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Patch
 
-# Streamlit page setup
-st.set_page_config(page_title="Batch Health Trend Zones", layout="wide")
-st.title("📊 Batch Health Risk & Zone Tracker by Vertical")
+# Streamlit page config
+st.set_page_config(page_title="Batch Health Risk Analysis", layout="wide")
+st.title("📊 Batch Health Tracker: Risk & Healthy Zone (% of Courses)")
 
-# Upload files
-st.subheader("📁 Upload CSV for BH < 10%")
-file_below10 = st.file_uploader("Upload BH < 10% CSV", type=["csv"], key="below10")
+# Upload inputs
+st.subheader("🔻 Upload BH < 10% CSV")
+file_below10 = st.file_uploader("Upload % of batches in BH < 10", type=["csv"], key="below10")
 
-st.subheader("📁 Upload CSV for BH > 50%")
-file_above50 = st.file_uploader("Upload BH > 50% CSV", type=["csv"], key="above50")
+st.subheader("🔺 Upload BH > 50% CSV")
+file_above50 = st.file_uploader("Upload % of batches in BH > 50", type=["csv"], key="above50")
 
-# Function for determining zone color based on trend
-def get_zone_color_below10(last, current):
-    if current > last:
-        return "red"    # BH < 10% increasing = risk
-    elif current < last:
-        return "green"  # BH < 10% decreasing = improvement
+# Trend + zone coloring logic
+def get_below10_trend(last, current):
+    diff = current - last
+    if diff > 5:
+        return "↑↑", "Strong Risk", "red"
+    elif diff > 1:
+        return "↑", "Mild Risk", "red"
+    elif diff < -5:
+        return "↓↓", "Strong Healthy", "green"
+    elif diff < -1:
+        return "↓", "Mild Healthy", "green"
     else:
-        return "orange" # No change
+        return "→", "Watch", "orange"
 
-def get_zone_color_above50(last, current):
-    if current > last:
-        return "green"  # BH > 50% increasing = improvement
-    elif current < last:
-        return "red"    # BH > 50% decreasing = risk
+def get_above50_trend(last, current):
+    diff = current - last
+    if diff > 5:
+        return "↑↑", "Strong Healthy", "green"
+    elif diff > 1:
+        return "↑", "Mild Healthy", "green"
+    elif diff < -5:
+        return "↓↓", "Strong Risk", "red"
+    elif diff < -1:
+        return "↓", "Mild Risk", "red"
     else:
-        return "orange" # No change
+        return "→", "Watch", "orange"
 
-# Main plot function
-def plot_graph(df, title, bh_type):
+# Graph plotter
+def plot_graph(df, title, is_below10=True):
     df["Last week"] = df["Last week"].astype(str).str.replace("%", "").astype(float)
     df["This week"] = df["This week"].astype(str).str.replace("%", "").astype(float)
 
-    verticals = df["Vertical"].tolist()
+    categories = df["Vertical"].tolist()
     last_vals = df["Last week"].tolist()
     this_vals = df["This week"].tolist()
-    x = np.arange(len(verticals))
+
+    x = np.arange(len(categories))
     width = 0.35
 
-    # Color each bar based on trend
-    if bh_type == "below10":
-        colors_this = [get_zone_color_below10(last_vals[i], this_vals[i]) for i in range(len(verticals))]
-        colors_last = colors_this  # Keep same color logic for comparison
-    else:
-        colors_this = [get_zone_color_above50(last_vals[i], this_vals[i]) for i in range(len(verticals))]
-        colors_last = colors_this
+    arrows, meanings, zone_colors = [], [], []
+    for i in range(len(categories)):
+        if is_below10:
+            arrow, meaning, color = get_below10_trend(last_vals[i], this_vals[i])
+        else:
+            arrow, meaning, color = get_above50_trend(last_vals[i], this_vals[i])
+        arrows.append(arrow)
+        meanings.append(meaning)
+        zone_colors.append(color)
 
-    fig, ax = plt.subplots(figsize=(max(12, len(verticals) * 1.2), 7))
+    fig, ax = plt.subplots(figsize=(max(12, len(categories) * 1.2), 7))
 
-    ax.bar(x - width/2, last_vals, width, color=colors_last, edgecolor='blue', linewidth=2)
-    ax.bar(x + width/2, this_vals, width, color=colors_this, edgecolor='gold', linewidth=2)
+    # Bar chart
+    ax.bar(x - width/2, last_vals, width, edgecolor='blue', facecolor='white', linewidth=2)
+    ax.bar(x + width/2, this_vals, width, color=zone_colors, edgecolor='black', linewidth=2)
 
-    ax.set_ylabel("Percentage")
+    ax.set_ylabel("% of Courses")
     ax.set_title(title)
     ax.set_xticks(x)
-    ax.set_xticklabels(verticals, rotation=45, ha="right")
+    ax.set_xticklabels(categories, rotation=45, ha="right")
 
-    # Add value and arrow with improvement color
-    for i in range(len(verticals)):
-        diff = this_vals[i] - last_vals[i]
-        improving = (diff < 0 and bh_type == "below10") or (diff > 0 and bh_type == "above50")
-        arrow = "↑" if diff > 0 else "↓"
-        arrow_color = "green" if improving else "red"
-
+    for i in range(len(categories)):
         ax.text(x[i] - width/2, last_vals[i] + 1, f"{last_vals[i]:.2f}", ha='center', fontsize=9)
-        ax.text(x[i] + width/2, this_vals[i] + 1, f"{this_vals[i]:.2f} {arrow}", ha='center', fontsize=9, color=arrow_color)
+        ax.text(x[i] + width/2, this_vals[i] + 1, f"{this_vals[i]:.2f} {arrows[i]}", ha='center', fontsize=9, color=zone_colors[i])
 
-    # Legend based on zone logic
+    # Legends
     zone_legend = [
         Patch(color='green', label='🟩 Healthy Zone'),
         Patch(color='orange', label='🟧 Watch Zone'),
         Patch(color='red', label='🟥 Risk Zone')
     ]
-    week_legend = [
-        Patch(facecolor='white', edgecolor='blue', linewidth=2, label='⬅️ Last Week'),
-        Patch(facecolor='white', edgecolor='gold', linewidth=2, label='➡️ This Week')
+    trend_legend = [
+        Patch(facecolor='white', edgecolor='black', linewidth=1, label='⬅️ Last Week'),
+        Patch(facecolor='white', edgecolor='black', label='➡️ This Week')
     ]
 
-    ax.legend(handles=zone_legend + week_legend,
-              title="Legend",
-              loc='upper right',
-              bbox_to_anchor=(1, 1),
-              frameon=True)
-
+    ax.legend(handles=zone_legend + trend_legend, title="Legend", loc='upper right', bbox_to_anchor=(1, 1))
     plt.tight_layout()
     return fig
 
-# Render charts
+# Display charts
 if file_below10:
     try:
-        st.markdown("### 🔻 BH Below 10% (Increasing is Risk)")
+        st.markdown("### 🔻 % of Courses in BH < 10%")
         df1 = pd.read_csv(file_below10)
-        fig1 = plot_graph(df1, "BH < 10% - Zone Analysis", "below10")
+        df1.rename(columns=lambda x: x.strip(), inplace=True)
+        fig1 = plot_graph(df1, "Batch Health Below 10% Trend & Zones", is_below10=True)
         st.pyplot(fig1)
     except Exception as e:
-        st.error(f"Error reading BH < 10% CSV: {e}")
+        st.error(f"Error processing BH < 10%: {e}")
 
 if file_above50:
     try:
-        st.markdown("### 🔺 BH Above 50% (Increasing is Healthy)")
+        st.markdown("### 🔺 % of Courses in BH > 50%")
         df2 = pd.read_csv(file_above50)
-        fig2 = plot_graph(df2, "BH > 50% - Zone Analysis", "above50")
+        df2.rename(columns=lambda x: x.strip(), inplace=True)
+        fig2 = plot_graph(df2, "Batch Health Above 50% Trend & Zones", is_below10=False)
         st.pyplot(fig2)
     except Exception as e:
-        st.error(f"Error reading BH > 50% CSV: {e}")
+        st.error(f"Error processing BH > 50%: {e}")
