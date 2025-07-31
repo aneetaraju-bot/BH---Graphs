@@ -15,9 +15,10 @@ this_week_date = "June 30"
 uploaded_file = st.file_uploader("📁 Upload CSV with 'Category', 'Last week', 'This week' columns", type=["csv"])
 
 if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-
     try:
+        # Load CSV
+        df = pd.read_csv(uploaded_file)
+
         # Clean percentage symbols and convert to float
         df["Last week"] = df["Last week"].astype(str).str.replace("%", "").astype(float)
         df["This week"] = df["This week"].astype(str).str.replace("%", "").astype(float)
@@ -27,18 +28,18 @@ if uploaded_file:
         last_week_vals = df["Last week"].tolist()
         this_week_vals = df["This week"].tolist()
 
-        # Color based on improvement or decline
+        # Determine color based on trend
         def get_trend_color(this_val, last_val):
             if this_val < last_val:
-                return 'green'   # Improvement
+                return 'green'   # Improved
             elif this_val > last_val:
-                return 'red'     # Decline
+                return 'red'     # Declined
             else:
                 return 'gold'    # No change
 
         trend_colors = [get_trend_color(this, last) for this, last in zip(this_week_vals, last_week_vals)]
 
-        # Plotting only THIS WEEK with trend color
+        # Plotting this week's values
         x = np.arange(len(categories))
         width = 0.6
 
@@ -50,7 +51,7 @@ if uploaded_file:
         ax.set_xticks(x)
         ax.set_xticklabels(categories, rotation=45)
 
-        # Add % + trend label
+        # Add % and trend symbols on top of bars
         for i, bar in enumerate(bars):
             height = bar.get_height()
             change = this_week_vals[i] - last_week_vals[i]
@@ -61,7 +62,7 @@ if uploaded_file:
                         textcoords="offset points",
                         ha='center', va='bottom', fontsize=9)
 
-        # Custom legend
+        # Add legend
         ax.legend(handles=[
             Patch(color='green', label='Improved (↓)'),
             Patch(color='red', label='Declined (↑)'),
@@ -75,9 +76,3 @@ if uploaded_file:
 
 else:
     st.info("📤 Please upload a CSV file with columns: Category, Last week, This week.")
-
-    except Exception as e:
-        st.error(f"❌ Error: {e}")
-else:
-    st.info("📤 Please upload a CSV file with columns: Category, Last week, This week.")
-
