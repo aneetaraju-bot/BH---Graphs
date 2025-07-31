@@ -23,4 +23,53 @@ if uploaded_file:
         this_week_below_10 = df["This week"].tolist()
 
         x = np.arange(len(categories))
-        wi
+        width = 0.35
+
+        # Zone coloring function
+        def get_zone_color(val):
+            if val > 50:
+                return 'red'
+            elif val > 10:
+                return 'orange'
+            else:
+                return 'green'
+
+        last_colors = [get_zone_color(v) for v in last_week_below_10]
+        this_colors = [get_zone_color(v) for v in this_week_below_10]
+
+        # Plotting
+        fig, ax = plt.subplots(figsize=(12, 6))
+        bars1 = ax.bar(x - width/2, last_week_below_10, width, color=last_colors)
+        bars2 = ax.bar(x + width/2, this_week_below_10, width, color=this_colors)
+
+        ax.set_ylabel('Percentage')
+        ax.set_title('Vertical-wise BH < 10%')
+        ax.set_xticks(x)
+        ax.set_xticklabels(categories, rotation=45)
+
+        # Add labels with date on top of each bar
+        def add_labels(bars, date_label):
+            for bar in bars:
+                height = bar.get_height()
+                ax.annotate(f'{height:.2f}%\n({date_label})',
+                            xy=(bar.get_x() + bar.get_width() / 2, height),
+                            xytext=(0, 5),
+                            textcoords="offset points",
+                            ha='center', va='bottom', fontsize=9)
+
+        add_labels(bars1, last_week_date)
+        add_labels(bars2, this_week_date)
+
+        # Custom legend
+        ax.legend(handles=[
+            Patch(facecolor='green', label='Healthy (<10%)'),
+            Patch(facecolor='orange', label='Watch Zone (10–50%)'),
+            Patch(facecolor='red', label='Risk Zone (>50%)')
+        ], loc='upper right')
+
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.error("❌ Invalid CSV format. Please ensure it includes 'Category', 'Last week', and 'This week' columns.")
+else:
+    st.info("📤 Please upload a CSV file with columns: Category, Last week, This week.")
