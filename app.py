@@ -139,4 +139,8 @@ if file_category_trend:
         st.write(f"BH >50% changed: {high_last:.2f}% → {high_now:.2f}%")
         if change == "📈 Improved":
             st.success("Improved zone status — keep up the momentum.")
-        elif
+        elif change == "📉 Declined":
+            st.error("Zone declined — investigate causes and take action.")
+        else:
+            st.info("Zone unchanged — maintain current strategy.")
+        st.markdown("---")
