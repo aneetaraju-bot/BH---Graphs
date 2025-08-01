@@ -33,11 +33,12 @@ def draw_zone_chart(df, label_col, is_below, title):
     x = np.arange(len(labels))
     width = 0.35
 
-    zone_colors = [get_color_below(v, avg) if is_below else get_color_above(v, avg) for v in this]
+    zone_colors_this = [get_color_below(v, avg) if is_below else get_color_above(v, avg) for v in this]
+    zone_colors_last = [get_color_below(v, avg) if is_below else get_color_above(v, avg) for v in last]
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(x - width/2, last, width, color='white', edgecolor='black', label='Last Week')
-    ax.bar(x + width/2, this, width, color=zone_colors, edgecolor='black', label='This Week')
+    ax.bar(x - width/2, last, width, color=zone_colors_last, edgecolor='black', label='Last Week')
+    ax.bar(x + width/2, this, width, color=zone_colors_this, edgecolor='black', label='This Week')
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=45, ha='right')
@@ -48,8 +49,7 @@ def draw_zone_chart(df, label_col, is_below, title):
         Patch(facecolor='green', edgecolor='black', label='🟩 Healthy'),
         Patch(facecolor='orange', edgecolor='black', label='🟧 Watch Zone'),
         Patch(facecolor='red', edgecolor='black', label='🟥 Risk'),
-        Patch(facecolor='white', edgecolor='black', label='⬜ Last Week'),
-        Patch(facecolor='black', edgecolor='black', label='⬛ This Week'),
+        Patch(facecolor='white', edgecolor='black', label='⬜ Background (unused)'),
     ]
     ax.legend(handles=legend_items, loc='upper right', bbox_to_anchor=(1, 1))
     st.pyplot(fig)
@@ -139,8 +139,4 @@ if file_category_trend:
         st.write(f"BH >50% changed: {high_last:.2f}% → {high_now:.2f}%")
         if change == "📈 Improved":
             st.success("Improved zone status — keep up the momentum.")
-        elif change == "📉 Declined":
-            st.error("Zone declined — investigate causes and take action.")
-        else:
-            st.info("Zone unchanged — maintain current strategy.")
-        st.markdown("---")
+        elif
