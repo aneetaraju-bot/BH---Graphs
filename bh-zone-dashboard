@@ -1,0 +1,9 @@
+bh-zone-dashboard/
+│
+├── app.py                 ← your Streamlit script
+├── category_trend.csv     ← sample or real data
+├── vertical_bh_below.csv
+├── vertical_bh_above.csv
+├── category_bh_below.csv
+├── category_bh_above.csv
+├── requirements.txt       ← python libraries
